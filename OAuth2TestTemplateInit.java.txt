@@ -1,0 +1,67 @@
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.security.oauth2.client.DefaultOAuth2ClientContext;
+import org.springframework.security.oauth2.client.OAuth2ClientContext;
+import org.springframework.security.oauth2.client.OAuth2RestTemplate;
+import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
+import org.springframework.security.oauth2.client.token.AccessTokenProvider;
+import org.springframework.security.oauth2.client.token.grant.password.ResourceOwnerPasswordAccessTokenProvider;
+import org.springframework.security.oauth2.client.token.grant.password.ResourceOwnerPasswordResourceDetails;
+
+/**
+ * OAuth2RestTemplate.
+ */
+@Configuration
+public class OAuth2TestTemplateInit {
+
+    @Autowired(required = false)
+    ClientHttpRequestFactory clientHttpRequestFactory;
+
+    /*
+     * ClientHttpRequestFactory is autowired and checked in case somewhere in
+     * your configuration you provided {@link ClientHttpRequestFactory}
+     * implementation Bean where you defined specifics of your connection, if
+     * not it is instantiated here with {@link SimpleClientHttpRequestFactory}
+     */
+    @Bean
+    public ClientHttpRequestFactory getClientHttpRequestFactory() {
+        if (clientHttpRequestFactory == null) {
+            clientHttpRequestFactory = new SimpleClientHttpRequestFactory();
+        }
+        return clientHttpRequestFactory;
+    }
+
+    @Bean
+    public OAuth2RestTemplate oAuth2RestTemplate(){
+        OAuth2RestTemplate template = new OAuth2RestTemplate(getOAuth2ProtectedResourceDetails(),getOAuth2ClientContext());
+        template.setRequestFactory(clientHttpRequestFactory);
+        template.setAccessTokenProvider(userAccessTokenProvider());
+        return template;
+    }
+
+    @Bean
+    public AccessTokenProvider userAccessTokenProvider() {
+        ResourceOwnerPasswordAccessTokenProvider accessTokenProvider = new ResourceOwnerPasswordAccessTokenProvider();
+        accessTokenProvider.setRequestFactory(getClientHttpRequestFactory());
+        return accessTokenProvider;
+    }
+
+    private OAuth2ClientContext getOAuth2ClientContext(){
+        OAuth2ClientContext cntext = new DefaultOAuth2ClientContext();
+        return cntext;
+    }
+
+    private OAuth2ProtectedResourceDetails getOAuth2ProtectedResourceDetails(){
+        ResourceOwnerPasswordResourceDetails details = new ResourceOwnerPasswordResourceDetails();
+        details.setPassword("password");
+        details.setUsername("user");
+        details.setClientId("clientId");
+        details.setClientSecret("secret");
+        details.setId("http://localhost:8769/uaa/oauth/authorize");
+        details.setAccessTokenUri("http://localhost:8769/uaa/oauth/token");
+        return details;
+    }
+}
